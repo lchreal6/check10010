@@ -281,6 +281,7 @@ async function app() {
   $ui.loading("加载中...");
   const [myIndexData, flowData, callData] = await Promise.all([request.getInfoSync(), request.getFlowDetail(), request.getCallChargeDetail()])
                                                     .catch(err => {
+                                                      $ui.loading(false);
                                                       $ui.toast('网络异常或未使用过支付宝中国联通小程序', 3);
                                                     })
   const indexDataList = myIndexData.dataList;
