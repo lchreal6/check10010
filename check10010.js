@@ -43,7 +43,6 @@ class Request {
 }
 
 function render(indexDataList, flowData, renderCallData) {
-  let callMatrixIndex = 0;
   const tabTitle = ["资费总览", "余量明细", "实时话费"];
   $ui.render({
     views: [
@@ -74,7 +73,6 @@ function render(indexDataList, flowData, renderCallData) {
         props: {
           id: "view1",
           // hidden: true,
-          bgcolor: $color("#fff")
         },
         layout: function(make, view) {
           make.left.bottom.right.equalTo(0);
@@ -86,6 +84,7 @@ function render(indexDataList, flowData, renderCallData) {
             props: {
               columns: 3,
               itemHeight: 40,
+              bgcolor: $rgba(255, 255, 255, 0.1),
               spacing: 1,
               template: [
                 {
@@ -204,54 +203,42 @@ function render(indexDataList, flowData, renderCallData) {
         },
         views: [
           {
-            type: "matrix",
+            type: "list",
             props: {
-              columns: 2,
-              itemHeight: 40,
-              spacing: 0,
               template: [
                 {
                   type: "label",
                   props: {
-                    id: "label1",
-                    // bgcolor: $color("blue"),
-                    textColor: $color("#000"),
-                    align: $align.left,
-                    font: $font(16)
+                    id: "name-label",
+                    font: $font(14)
                   },
                   layout: function(make, view) {
-                    if (callMatrixIndex % 2 === 0) {
-                      make.left.inset(10);
-                    } else {
-                      make.right.inset(10);
-                    }
-                    callMatrixIndex++;
-                    make.bottom.top.equalTo(0);
+                    make.left.equalTo(10);
+                    make.centerY.equalTo(view.super);
+                  }
+                },
+                {
+                  type: "label",
+                  props: {
+                    id: "value-label",
+                    font: $font(14),
+                    align: $align.center
+                  },
+                  layout: function(make, view) {
+                    make.centerY.equalTo(view.super);
+                    make.right.inset(10);
                   }
                 }
               ],
-              data: renderCallData.map(function(item, index) {
-                if (index % 2 === 0) {
-                  return {
-                    label1: {
-                      text: item,
-                      align: $align.left,
-                      layout: function(make) {
-                        make.bottom.top.equalTo(20);
-                      }
-                    },
-                    layout: function(make, view) {
-                      make.bottom.top.equalTo(200);
-                    }
-                  };
-                } else {
-                  return {
-                    label1: {
-                      text: item,
-                      align: $align.right
-                    }
-                  };
-                }
+              data: renderCallData.map(function(item) {
+                return { 
+                  "name-label": { 
+                    text: item.title 
+                  },
+                  "value-label": {
+                    text: item.value
+                  }
+                };
               })
             },
             layout: $layout.fill
@@ -264,13 +251,23 @@ function render(indexDataList, flowData, renderCallData) {
 
 function handleCallData(callData) {
   const itemInfo = callData.realfeeinfo[0].itemInfo;
-  const itemInfoList = [];
+  let itemInfoList = [];
   itemInfo.map(item => {
-    itemInfoList.push(item.integrateItemName, `${item.integrateFee}元`);
+    itemInfoList.push({
+      title: item.integrateItemName,
+      value: `${item.integrateFee}元` 
+    })
   });
-  itemInfoList.push("实时话费", `${callData.fee}元`);
-  itemInfoList.push("当前可用余额", `${callData.balance}元`);
-  itemInfoList.push("账户欠费", `${callData.arrearage}元`);
+  itemInfoList = [...itemInfoList, {
+    title: "实时话费",
+    value: `${callData.fee}元`  
+  },{
+    title: "当前可用余额",
+    value: `${callData.balance}元` 
+  },{
+    title: "账户欠费",
+    value: `${callData.arrearage}元` 
+  }]
   return itemInfoList;
 }
 
