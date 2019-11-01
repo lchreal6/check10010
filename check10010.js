@@ -13,7 +13,7 @@ class Request {
 
   requestSync(url) {
     return new Promise((resolve, rejcet) => {
-      $ui.loading("加载中...");
+      $ui.loading("加载中...")
       $http.get({
         url: `${url}?user_id=${this.userId}`,
         handler: function(resp) {
@@ -48,9 +48,6 @@ function render(request, indexDataList) {
   let flowData = null;
   let callChargeData = null;
   $ui.render({
-    props: {
-      // debugging: true
-    },
     views: [
       {
         type: "tab",
@@ -79,20 +76,33 @@ function render(request, indexDataList) {
                         if (indexPath.row == 0) {
                           return 30;
                         } else {
-                          return 40;
+                          return 25;
                         }
                       }
                     },
                     props: {
+                      bgcolor: $color('clear'),
                       separatorHidden: true,
                       rowHeight: 30,
                       data: flowData.woFeePolicy.map((item, index) => {
                         return {
-                          title: item.feePolicyName,
                           rows: [
+                            {
+                              type: "label",
+                              props: {
+                                text: item.feePolicyName,
+                                textColor: $color("#000"),
+                                align: $align.left,
+                                font: $font(14),
+                              },
+                              layout: function(make, view) {
+                                make.left.inset(20);
+                              }
+                            },
                             {
                               type: "progress",
                               props: {
+                                trackColor: $color('#f5f5f5'),
                                 value:
                                   item.xUsedValue /
                                   (+item.xUsedValue + +item.canUseResourceVal)
@@ -111,6 +121,7 @@ function render(request, indexDataList) {
                                 }/${+item.xUsedValue + +item.canUseResourceVal}${
                                   item.canUseUnitVal
                                 }`,
+                                textColor: $color("#000"),
                                 align: $align.center
                               },
                               layout: $layout.fill
@@ -128,12 +139,14 @@ function render(request, indexDataList) {
                   item.add({
                     type: "list",
                     props: {
+                      separatorColor: $rgba(0, 0, 0, 0.3), 
                       template: [
                         {
                           type: "label",
                           props: {
                             id: "name-label",
-                            font: $font(14)
+                            font: $font(14),
+                            textColor: $color("#000"),
                           },
                           layout: function(make, view) {
                             make.left.equalTo(10);
@@ -145,6 +158,7 @@ function render(request, indexDataList) {
                           props: {
                             id: "value-label",
                             font: $font(14),
+                            textColor: $color("#000"),
                             align: $align.center
                           },
                           layout: function(make, view) {
@@ -188,7 +202,6 @@ function render(request, indexDataList) {
             props: {
               columns: 3,
               itemHeight: 40,
-              bgcolor: $rgba(255, 255, 255, 0.1),
               spacing: 1,
               template: [
                 {
@@ -240,7 +253,7 @@ function render(request, indexDataList) {
         },
         layout: function(make, view) {
           make.left.bottom.right.equalTo(0);
-          make.top.equalTo(34);
+          make.top.equalTo(44);
         },
         views: []
       },
@@ -248,7 +261,6 @@ function render(request, indexDataList) {
         type: "view",
         props: {
           id: "view3",
-          bgcolor: $color("#fff"),
           hidden: true
         },
         layout: function(make) {
