@@ -1,4 +1,4 @@
-const USER_ID = '';
+const USER_ID = '15622711182';
 const INDEX_DATA_URL =
   "https://mina.10010.com/wxapplet/bind/getIndexData/alipay/alipaymini";
 const FLOW_DETAIL_URL =
@@ -13,17 +13,18 @@ class Request {
 
   requestSync(url) {
     return new Promise((resolve, rejcet) => {
+      $ui.loading("加载中...");
       $http.get({
         url: `${url}?user_id=${this.userId}`,
         handler: function(resp) {
-          if (resp.error) {
+          $ui.loading(false);
+          var data = resp.data;
+          if (data && data.code === '0000') {
+            resolve(data);
+          } else {
+            $ui.toast('网络异常或未使用过支付宝中国联通小程序', 3);
             rejcet(resp.error);
           }
-          var data = resp.data;
-          if(data.code === '0000') {
-            resolve(data); 
-          }
-          rejcet(resp.error);
         }
       });
     });
@@ -42,9 +43,14 @@ class Request {
   }
 }
 
-function render(indexDataList, flowData, renderCallData) {
+function render(request, indexDataList) {
   const tabTitle = ["资费总览", "余量明细", "实时话费"];
+  let flowData = null;
+  let callChargeData = null;
   $ui.render({
+    props: {
+      // debugging: true
+    },
     views: [
       {
         type: "tab",
@@ -59,10 +65,108 @@ function render(indexDataList, flowData, renderCallData) {
           changed: function(sender) {
             const index = sender.index;
             const viewList = [$("view1"), $("view2"), $("view3")];
-            viewList.map((item, key) => {
+            viewList.map(async (item, key) => {
               item.hidden = true;
               if (key == index) {
                 item.hidden = false;
+                if(key === 1) {
+                  if(flowData) return;
+                  flowData = await request.getFlowDetail()
+                  item.add({
+                    type: "list",
+                    events: {
+                      rowHeight: function(sender, indexPath) {
+                        if (indexPath.row == 0) {
+                          return 30;
+                        } else {
+                          return 40;
+                        }
+                      }
+                    },
+                    props: {
+                      separatorHidden: true,
+                      rowHeight: 30,
+                      data: flowData.woFeePolicy.map((item, index) => {
+                        return {
+                          title: item.feePolicyName,
+                          rows: [
+                            {
+                              type: "progress",
+                              props: {
+                                value:
+                                  item.xUsedValue /
+                                  (+item.xUsedValue + +item.canUseResourceVal)
+                              },
+                              layout: function(make, view) {
+                                make.centerY.equalTo(view.super);
+                                make.left.right.inset(20);
+                                make.height.equalTo(3);
+                              }
+                            },
+                            {
+                              type: "label",
+                              props: {
+                                text: `${item.xUsedValue}${
+                                  item.usedUnitVal
+                                }/${+item.xUsedValue + +item.canUseResourceVal}${
+                                  item.canUseUnitVal
+                                }`,
+                                align: $align.center
+                              },
+                              layout: $layout.fill
+                            }
+                          ]
+                        };
+                      })
+                    },
+                    layout: $layout.fill
+                  })
+                } else if (key === 2) {
+                  if(callChargeData) return;
+                  callChargeData = await request.getCallChargeDetail()
+                  const renderCallData = handleCallData(callChargeData);
+                  item.add({
+                    type: "list",
+                    props: {
+                      template: [
+                        {
+                          type: "label",
+                          props: {
+                            id: "name-label",
+                            font: $font(14)
+                          },
+                          layout: function(make, view) {
+                            make.left.equalTo(10);
+                            make.centerY.equalTo(view.super);
+                          }
+                        },
+                        {
+                          type: "label",
+                          props: {
+                            id: "value-label",
+                            font: $font(14),
+                            align: $align.center
+                          },
+                          layout: function(make, view) {
+                            make.centerY.equalTo(view.super);
+                            make.right.inset(10);
+                          }
+                        }
+                      ],
+                      data: renderCallData.map(function(item) {
+                        return { 
+                          "name-label": { 
+                            text: item.title 
+                          },
+                          "value-label": {
+                            text: item.value
+                          }
+                        };
+                      })
+                    },
+                    layout: $layout.fill
+                  })
+                }
               }
             });
           }
@@ -138,57 +242,7 @@ function render(indexDataList, flowData, renderCallData) {
           make.left.bottom.right.equalTo(0);
           make.top.equalTo(34);
         },
-        views: [
-          {
-            type: "list",
-            events: {
-              rowHeight: function(sender, indexPath) {
-                if (indexPath.row == 0) {
-                  return 30;
-                } else {
-                  return 40;
-                }
-              }
-            },
-            props: {
-              separatorHidden: true,
-              rowHeight: 30,
-              data: flowData.woFeePolicy.map((item, index) => {
-                return {
-                  title: item.feePolicyName,
-                  rows: [
-                    {
-                      type: "progress",
-                      props: {
-                        value:
-                          item.xUsedValue /
-                          (+item.xUsedValue + +item.canUseResourceVal)
-                      },
-                      layout: function(make, view) {
-                        make.centerY.equalTo(view.super);
-                        make.left.right.inset(20);
-                        make.height.equalTo(3);
-                      }
-                    },
-                    {
-                      type: "text",
-                      props: {
-                        text: `${item.xUsedValue}${
-                          item.usedUnitVal
-                        }/${+item.xUsedValue + +item.canUseResourceVal}${
-                          item.canUseUnitVal
-                        }`,
-                        align: $align.center
-                      },
-                      layout: $layout.fill
-                    }
-                  ]
-                };
-              })
-            },
-            layout: $layout.fill
-          }
-        ]
+        views: []
       },
       {
         type: "view",
@@ -197,53 +251,11 @@ function render(indexDataList, flowData, renderCallData) {
           bgcolor: $color("#fff"),
           hidden: true
         },
-        layout: function(make, view) {
+        layout: function(make) {
           make.left.bottom.right.equalTo(0);
           make.top.equalTo(34);
         },
-        views: [
-          {
-            type: "list",
-            props: {
-              template: [
-                {
-                  type: "label",
-                  props: {
-                    id: "name-label",
-                    font: $font(14)
-                  },
-                  layout: function(make, view) {
-                    make.left.equalTo(10);
-                    make.centerY.equalTo(view.super);
-                  }
-                },
-                {
-                  type: "label",
-                  props: {
-                    id: "value-label",
-                    font: $font(14),
-                    align: $align.center
-                  },
-                  layout: function(make, view) {
-                    make.centerY.equalTo(view.super);
-                    make.right.inset(10);
-                  }
-                }
-              ],
-              data: renderCallData.map(function(item) {
-                return { 
-                  "name-label": { 
-                    text: item.title 
-                  },
-                  "value-label": {
-                    text: item.value
-                  }
-                };
-              })
-            },
-            layout: $layout.fill
-          }
-        ]
+        views: []
       }
     ]
   });
@@ -275,16 +287,10 @@ async function app() {
   const request = new Request({
     userId: USER_ID
   });
-  $ui.loading("加载中...");
-  const [myIndexData, flowData, callData] = await Promise.all([request.getInfoSync(), request.getFlowDetail(), request.getCallChargeDetail()])
-                                                    .catch(err => {
-                                                      $ui.loading(false);
-                                                      $ui.toast('网络异常或未使用过支付宝中国联通小程序', 3);
-                                                    })
+  
+  const myIndexData = await request.getInfoSync()
   const indexDataList = myIndexData.dataList;
-  const renderCallData = handleCallData(callData);
-  render(indexDataList, flowData, renderCallData);
-  $ui.loading(false);
+  render(request, indexDataList);
 }
 
 app();
