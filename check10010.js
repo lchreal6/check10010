@@ -1,4 +1,12 @@
-const USER_ID = '15622711182';
+/**
+ * @name check10010
+ * @author lchreal6
+ * @url https://github.com/lchreal6/check10010
+ * @description 中国联通话费流量查询面板
+ */
+
+let USER_ID = $cache.get("phone") || "";
+
 const INDEX_DATA_URL =
   "https://mina.10010.com/wxapplet/bind/getIndexData/alipay/alipaymini";
 const FLOW_DETAIL_URL =
@@ -6,6 +14,11 @@ const FLOW_DETAIL_URL =
 const CALL_CHARGE_URL =
   "https://mina.10010.com/wxapplet/bind/getCurrFare/alipay/alipaymini";
 
+/**
+ * 请求库
+ *
+ * @class Request
+ */
 class Request {
   constructor(options) {
     this.userId = options.userId;
@@ -13,41 +26,237 @@ class Request {
 
   requestSync(url) {
     return new Promise((resolve, rejcet) => {
-      $ui.loading("加载中...")
+      $ui.loading("加载中...");
       $http.get({
         url: `${url}?user_id=${this.userId}`,
         handler: function(resp) {
           $ui.loading(false);
           var data = resp.data;
-          if (data && data.code === '0000') {
+          if (data && data.code === "0000") {
             resolve(data);
           } else {
-            $ui.toast('网络异常或未使用过支付宝中国联通小程序', 3);
-            rejcet(resp.error);
+            // $ui.toast("网络异常或未使用过支付宝中国联通小程序", 3);
+            resolve(null);
           }
         }
       });
     });
   }
 
+  /**
+   * 资费概览
+   *
+   * @returns
+   * @memberof Request
+   */
   getInfoSync() {
     return this.requestSync(INDEX_DATA_URL);
   }
 
+  /**
+   * 用量详情
+   *
+   * @returns
+   * @memberof Request
+   */
   getFlowDetail() {
     return this.requestSync(FLOW_DETAIL_URL);
   }
 
+  /**
+   * 话费详情
+   *
+   * @returns
+   * @memberof Request
+   */
   getCallChargeDetail() {
     return this.requestSync(CALL_CHARGE_URL);
   }
 }
 
+/**
+ * 设置页
+ *
+ * @param {*} type
+ */
+function renderSettingPage(type) {
+  const renderData = {
+    props: {
+      title: "设置"
+    },
+    views: [
+      {
+        type: "label",
+        props: {
+          text: `当前手机号码:${USER_ID}`,
+          align: $align.center,
+          font: $font(18),
+          id: "setting-label"
+        },
+        layout: function(make, view) {
+          make.left.right.equalTo(0);
+          make.top.equalTo(10);
+        }
+      },
+      {
+        type: "button",
+        props: {
+          title: "修改号码",
+          align: $align.center,
+          contentEdgeInsets: $insets(5, 10, 5, 10),
+          id: "changePhone-btn"
+        },
+        layout: function(make, view) {
+          make.centerX.equalTo(view.super);
+          make.top.equalTo($("setting-label").bottom).offset(15);
+        },
+        events: {
+          tapped: function(sender) {
+            $input.text({
+              type: $kbType.number,
+              placeholder: "输入手机号码",
+              handler: function(text) {
+                USER_ID = text || USER_ID;
+                $cache.set("phone", USER_ID);
+                $("setting-label").text = `当前手机号码:${USER_ID}`;
+              }
+            });
+          }
+        }
+      }, {
+        type: "button",
+        props: {
+          title: "跳转支付宝中国联通小程序授权",
+          align: $align.center,
+          contentEdgeInsets: $insets(5, 10, 5, 10)
+        },
+        layout: function(make, view) {
+          make.centerX.equalTo(view.super);
+          make.top.equalTo($("changePhone-btn").bottom).offset(15);
+        },
+        events: {
+          tapped: function(sender) {
+            $app.openURL("alipays://platformapi/startapp?appId=2018121862582302")
+          }
+        }
+      }
+    ],
+    events: {
+      disappeared: function() {
+        app();
+      }
+    }
+  }
+  if(type === 'push') {
+    $ui.push(renderData);
+  } else {
+    $ui.render(renderData);
+  }
+}
+
+/**
+ * 主页
+ *
+ * @param {*} request
+ * @param {*} indexDataList
+ * @returns
+ */
 function render(request, indexDataList) {
-  const tabTitle = ["资费总览", "余量明细", "实时话费"];
+  const tabTitle = ["资费总览", "用量明细", "实时话费"];
   let flowData = null;
+  let flowDataLoading = false;
   let callChargeData = null;
+  let callChargeDataLoading = false;
+
+  // 数据异常时显示网络异常提示和修复方法
+  if(!indexDataList) {
+    $ui.render({
+      props: {
+        navButtons: [
+          {
+            title: "设置",
+            icon: "002",
+            handler: function() {
+              renderSettingPage('push')
+            }
+          }
+        ]
+      },
+      views:[
+        {
+          type: "label",
+          props: {
+            text: "网络异常，请尝试以下方法修复",
+            align: $align.center,
+            id: "error-label1"
+          },
+          layout: function(make, view) {
+            make.left.right.equalTo(0);
+            make.top.equalTo(10);
+          }
+        },
+        {
+          type: "label",
+          props: {
+            text: `1. 设置正确的手机号码，当前的手机号码： ${USER_ID || '--'}`,
+            align: $align.center,
+            font: $font(14),
+            id: "error-label2"
+          },
+          layout: function(make, view) {
+            make.left.right.equalTo(0);
+            make.top.equalTo($("error-label1").bottom).offset(5);
+          }
+        },
+        {
+          type: "label",
+          props: {
+            text: "2. 中国联通支付宝小程序登录授权",
+            align: $align.center,
+            font: $font(14),
+            id: "error-label3"
+          },
+          layout: function(make, view) {
+            make.left.right.equalTo(0);
+            make.top.equalTo($("error-label2").bottom).offset(5);
+          }
+        },
+        {
+          type: "button",
+          props: {
+            title: "去设置",
+            align: $align.center,
+            font: $font(12),
+            contentEdgeInsets: $insets(5, 10, 5, 10)
+          },
+          layout: function(make, view) {
+            make.centerX.equalTo(view.super);
+            make.top.equalTo($("error-label3").bottom).offset(5);
+          },
+          events: {
+            tapped: function(sender) {
+              renderSettingPage('push')
+            }
+          }
+        }
+      ]
+    });
+    return;
+  }
+
+  // 渲染查询面板
   $ui.render({
+    props: {
+      navButtons: [
+        {
+          title: "设置",
+          icon: "002",
+          handler: function() {
+            renderSettingPage('push')
+          }
+        }
+      ]
+    },
     views: [
       {
         type: "tab",
@@ -66,9 +275,12 @@ function render(request, indexDataList) {
               item.hidden = true;
               if (key == index) {
                 item.hidden = false;
-                if(key === 1) {
-                  if(flowData) return;
-                  flowData = await request.getFlowDetail()
+                if (key === 1) {
+                  if (flowData || flowDataLoading) return;
+                  flowDataLoading = true;
+                  flowData = await request.getFlowDetail();
+                  const sortFlowData = handleFlowData(flowData);
+                  flowDataLoading = false;
                   item.add({
                     type: "list",
                     events: {
@@ -81,10 +293,11 @@ function render(request, indexDataList) {
                       }
                     },
                     props: {
-                      bgcolor: $color('clear'),
+                      bgcolor: $color("clear"),
                       separatorHidden: true,
                       rowHeight: 30,
-                      data: flowData.woFeePolicy.map((item, index) => {
+                      data: sortFlowData.map((item, index) => {
+                        const percent = +item.xUsedValue / (+item.xUsedValue + +item.totalResourceVal);
                         return {
                           rows: [
                             {
@@ -93,7 +306,7 @@ function render(request, indexDataList) {
                                 text: item.feePolicyName,
                                 textColor: $color("#000"),
                                 align: $align.left,
-                                font: $font(14),
+                                font: $font(14)
                               },
                               layout: function(make, view) {
                                 make.left.inset(20);
@@ -102,10 +315,8 @@ function render(request, indexDataList) {
                             {
                               type: "progress",
                               props: {
-                                trackColor: $color('#f5f5f5'),
-                                value:
-                                  item.xUsedValue /
-                                  (+item.xUsedValue + +item.canUseResourceVal)
+                                trackColor: $color("#f5f5f5"),
+                                value: percent !== percent? 0 : percent
                               },
                               layout: function(make, view) {
                                 make.centerY.equalTo(view.super);
@@ -118,7 +329,8 @@ function render(request, indexDataList) {
                               props: {
                                 text: `${item.xUsedValue}${
                                   item.usedUnitVal
-                                }/${+item.xUsedValue + +item.canUseResourceVal}${
+                                }/${+item.xUsedValue +
+                                  +item.totalResourceVal}${
                                   item.canUseUnitVal
                                 }`,
                                 textColor: $color("#000"),
@@ -131,22 +343,25 @@ function render(request, indexDataList) {
                       })
                     },
                     layout: $layout.fill
-                  })
+                  });
                 } else if (key === 2) {
-                  if(callChargeData) return;
-                  callChargeData = await request.getCallChargeDetail()
+                  if (callChargeData || callChargeDataLoading) return;
+                  callChargeDataLoading = true;
+                  callChargeData = await request.getCallChargeDetail();
+                  callChargeDataLoading = false;
                   const renderCallData = handleCallData(callChargeData);
                   item.add({
                     type: "list",
                     props: {
-                      separatorColor: $rgba(0, 0, 0, 0.3), 
+                      separatorColor: $rgba(0, 0, 0, 0.3),
+                      selectable: false,
                       template: [
                         {
                           type: "label",
                           props: {
                             id: "name-label",
                             font: $font(14),
-                            textColor: $color("#000"),
+                            textColor: $color("#000")
                           },
                           layout: function(make, view) {
                             make.left.equalTo(10);
@@ -168,9 +383,9 @@ function render(request, indexDataList) {
                         }
                       ],
                       data: renderCallData.map(function(item) {
-                        return { 
-                          "name-label": { 
-                            text: item.title 
+                        return {
+                          "name-label": {
+                            text: item.title
                           },
                           "value-label": {
                             text: item.value
@@ -179,7 +394,7 @@ function render(request, indexDataList) {
                       })
                     },
                     layout: $layout.fill
-                  })
+                  });
                 }
               }
             });
@@ -189,7 +404,7 @@ function render(request, indexDataList) {
       {
         type: "view",
         props: {
-          id: "view1",
+          id: "view1"
           // hidden: true,
         },
         layout: function(make, view) {
@@ -273,36 +488,85 @@ function render(request, indexDataList) {
   });
 }
 
+/**
+ * 处理实时话费数据
+ *
+ * @param {*} callData
+ * @returns
+ */
 function handleCallData(callData) {
   const itemInfo = callData.realfeeinfo[0].itemInfo;
   let itemInfoList = [];
   itemInfo.map(item => {
     itemInfoList.push({
       title: item.integrateItemName,
-      value: `${item.integrateFee}元` 
-    })
+      value: `${item.integrateFee}元`
+    });
   });
-  itemInfoList = [...itemInfoList, {
-    title: "实时话费",
-    value: `${callData.fee}元`  
-  },{
-    title: "当前可用余额",
-    value: `${callData.balance}元` 
-  },{
-    title: "账户欠费",
-    value: `${callData.arrearage}元` 
-  }]
+  itemInfoList = [
+    ...itemInfoList,
+    {
+      title: "实时话费",
+      value: `${callData.fee}元`
+    },
+    {
+      title: "当前可用余额",
+      value: `${callData.balance}元`
+    },
+    {
+      title: "账户欠费",
+      value: `${callData.arrearage}元`
+    }
+  ];
   return itemInfoList;
+}
+
+/**
+ * 处理用量明细数据
+ *
+ * @param {*} flowData
+ * @returns
+ */
+function handleFlowData(flowData) {
+  const zeroPerArr = [];
+  const fullPerArr = [];
+  const restPerArr = [];
+  const nullPerArr = [];
+  flowData.woFeePolicy.map(function(item) {
+    const percent = +item.xUsedValue / (+item.xUsedValue + +item.totalResourceVal)
+    if(percent === 0) {
+      zeroPerArr.push(item);
+    } else if (percent === 1) {
+      fullPerArr.push(item);
+
+      // percent is NaN
+    } else if (percent !== percent) {
+      nullPerArr.push(item);
+    } else {
+      restPerArr.push(item);
+    }
+  })
+
+  restPerArr.sort(function(pre, current) {
+    const prePercent = +pre.xUsedValue / (+pre.xUsedValue + +pre.totalResourceVal)
+    const currentPercent = +current.xUsedValue / (+current.xUsedValue + +current.totalResourceVal)
+    return currentPercent - prePercent;
+  })
+  return [...fullPerArr, ...restPerArr, ...zeroPerArr, ...nullPerArr];
 }
 
 async function app() {
   const request = new Request({
     userId: USER_ID
   });
-  
-  const myIndexData = await request.getInfoSync()
-  const indexDataList = myIndexData.dataList;
+
+  const myIndexData = await request.getInfoSync();
+  const indexDataList = myIndexData && myIndexData.dataList;
   render(request, indexDataList);
 }
 
-app();
+try {
+  app();
+} catch (e) {
+  console.error(e);
+}
