@@ -14,6 +14,10 @@ const FLOW_DETAIL_URL =
 const CALL_CHARGE_URL =
   "https://mina.10010.com/wxapplet/bind/getCurrFare/alipay/alipaymini";
 
+let THEME_TEXT_COLOR = $color("#000");
+if($device.isDarkMode &&  $app.env == $env.today) {
+  THEME_TEXT_COLOR = $color("#fff")
+}
 /**
  * 请求库
  *
@@ -263,6 +267,7 @@ function render(request, indexDataList) {
           props: {
             text: "网络异常，请尝试以下方法修复",
             align: $align.center,
+            textColor: THEME_TEXT_COLOR,
             id: "error-label1"
           },
           layout: function(make, view) {
@@ -275,6 +280,7 @@ function render(request, indexDataList) {
           props: {
             text: `1. 设置正确的手机号码，当前的手机号码： ${USER_ID || "--"}`,
             align: $align.center,
+            textColor: THEME_TEXT_COLOR,
             font: $font(14),
             id: "error-label2"
           },
@@ -288,6 +294,7 @@ function render(request, indexDataList) {
           props: {
             text: "2. 中国联通支付宝小程序登录授权",
             align: $align.center,
+            textColor: THEME_TEXT_COLOR,
             font: $font(14),
             id: "error-label3"
           },
@@ -371,7 +378,7 @@ function render(request, indexDataList) {
                               type: "label",
                               props: {
                                 text: item.feePolicyName,
-                                textColor: $color("#000"),
+                                textColor: THEME_TEXT_COLOR,
                                 align: $align.left,
                                 font: $font(14)
                               },
@@ -399,7 +406,7 @@ function render(request, indexDataList) {
                                 }/${+item.xUsedValue + +item.totalResourceVal}${
                                   item.canUseUnitVal
                                 }`,
-                                textColor: $color("#000"),
+                                textColor: THEME_TEXT_COLOR,
                                 align: $align.center
                               },
                               layout: $layout.fill
@@ -427,7 +434,7 @@ function render(request, indexDataList) {
                           props: {
                             id: "name-label",
                             font: $font(14),
-                            textColor: $color("#000")
+                            textColor: THEME_TEXT_COLOR
                           },
                           layout: function(make, view) {
                             make.left.equalTo(10);
@@ -439,7 +446,7 @@ function render(request, indexDataList) {
                           props: {
                             id: "value-label",
                             font: $font(14),
-                            textColor: $color("#000"),
+                            textColor: THEME_TEXT_COLOR,
                             align: $align.center
                           },
                           layout: function(make, view) {
@@ -489,7 +496,7 @@ function render(request, indexDataList) {
                   type: "label",
                   props: {
                     id: "tile1",
-                    textColor: $color("#000"),
+                    textColor: THEME_TEXT_COLOR,
                     align: $align.center,
                     font: $font(16)
                   },
@@ -499,7 +506,7 @@ function render(request, indexDataList) {
                   type: "label",
                   props: {
                     id: "tile2",
-                    textColor: $color("#000"),
+                    textColor: THEME_TEXT_COLOR,
                     align: $align.center,
                     font: $font(16)
                   },
@@ -621,7 +628,7 @@ function handleFlowData(flowData) {
       +current.xUsedValue / (+current.xUsedValue + +current.totalResourceVal);
     return currentPercent - prePercent;
   });
-  return [...fullPerArr, ...restPerArr, ...zeroPerArr, ...nullPerArr];
+  return [...fullPerArr, ...restPerArr, ...zeroPerArr];
 }
 
 async function app() {
