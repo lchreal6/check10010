@@ -75,6 +75,33 @@ class Request {
 }
 
 /**
+ * 画箭头
+ *
+ * @param {*} color
+ * @returns
+ */
+function createEnter(color) {
+  let view = {
+    type: "canvas",
+    layout: $layout.fill,
+    events: {
+      draw: function(view, ctx) {
+        ctx.fillColor = color
+        ctx.strokeColor = color
+        ctx.allowsAntialiasing = true
+        ctx.setLineCap(1)
+        ctx.setLineWidth(1.5)
+        ctx.moveToPoint(2, 2)
+        ctx.addLineToPoint(view.frame.width - 2, view.frame.height / 2)
+        ctx.addLineToPoint(2, view.frame.height - 2)
+        ctx.strokePath()
+      }
+    }
+  }
+  return view
+}
+
+/**
  * 设置页
  *
  * @param {*} type
@@ -86,73 +113,130 @@ function renderSettingPage(type) {
     },
     views: [
       {
-        type: "label",
+        type: "list",
         props: {
-          text: `当前手机号码:${USER_ID}`,
-          align: $align.center,
-          font: $font(18),
-          id: "setting-label"
-        },
-        layout: function(make, view) {
-          make.left.right.equalTo(0);
-          make.top.equalTo(10);
-        }
-      },
-      {
-        type: "button",
-        props: {
-          title: "修改号码",
-          align: $align.center,
-          contentEdgeInsets: $insets(5, 10, 5, 10),
-          id: "changePhone-btn"
-        },
-        layout: function(make, view) {
-          make.centerX.equalTo(view.super);
-          make.top.equalTo($("setting-label").bottom).offset(15);
-        },
-        events: {
-          tapped: function(sender) {
-            $input.text({
-              type: $kbType.number,
-              placeholder: "输入手机号码",
-              handler: function(text) {
-                USER_ID = text || USER_ID;
-                $cache.set("phone", USER_ID);
-                $("setting-label").text = `当前手机号码:${USER_ID}`;
+          id: "setting-list",
+          style: 0,
+          separatorColor: $rgba(0, 0, 0, 0.3),
+          template: [
+            {
+              type: "label",
+              props: {
+                id: "name-label",
+                font: $font(14)
+              },
+              layout: function(make, view) {
+                make.left.equalTo(15);
+                make.centerY.equalTo(view.super);
               }
-            });
-          }
-        }
-      }, {
-        type: "button",
-        props: {
-          title: "跳转支付宝中国联通小程序授权",
-          align: $align.center,
-          contentEdgeInsets: $insets(5, 10, 5, 10)
+            },
+            {
+              type: "label",
+              props: {
+                id: "value-label",
+                font: $font(14)
+              },
+              layout: function(make, view) {
+                make.centerY.equalTo(view.super);
+                make.right.inset(35);
+              }
+            },
+            {
+              type: "view",
+              props: {
+                bgcolor: $color("clear"),
+              },
+              layout: function (make, view) {
+                make.right.inset(15)
+                make.centerY.equalTo(view.super)
+                make.size.equalTo($size(10, 16))
+              },
+              views: [createEnter($color("lightGray"))]
+            },
+          ],
+          data: [
+            {
+              "name-label": {
+                text: "设置当前手机号码"
+              },
+              "value-label": {
+                text: USER_ID
+              }
+            },
+            {
+              "name-label": {
+                text: "跳转支付宝中国联通小程序授权"
+              }
+            }
+          ]
         },
-        layout: function(make, view) {
-          make.centerX.equalTo(view.super);
-          make.top.equalTo($("changePhone-btn").bottom).offset(15);
+        layout: function(make) {
+          make.left.top.bottom.right.equalTo(0);
         },
         events: {
-          tapped: function(sender) {
-            $app.openURL("alipays://platformapi/startapp?appId=2018121862582302")
+          didSelect: function(sender, indexPath) {
+            if (indexPath.row === 0) {
+              $input.text({
+                type: $kbType.number,
+                placeholder: "输入手机号码",
+                handler: function(text) {
+                  USER_ID = text || USER_ID;
+                  $cache.set("phone", USER_ID);
+                  $("setting-list").data = [
+                    {
+                      "name-label": {
+                        text: "设置当前手机号码"
+                      },
+                      "value-label": {
+                        text: USER_ID
+                      }
+                    },
+                    {
+                      "name-label": {
+                        text: "跳转支付宝中国联通小程序授权"
+                      }
+                    }
+                  ]
+                }
+              });
+            } else if (indexPath.row === 1) {
+              $app.openURL(
+                "alipays://platformapi/startapp?appId=2018121862582302"
+              );
+            }
           }
         }
       }
     ],
     events: {
+      appeared: function() {
+        const app = $("appView");
+        app && app.remove();
+      },
       disappeared: function() {
         app();
       }
     }
-  }
-  if(type === 'push') {
+  };
+  if (type === "push") {
     $ui.push(renderData);
   } else {
     $ui.render(renderData);
   }
 }
+
+const viewPropsData = {
+  id: "appView",
+  navButtons: [
+    {
+      title: "设置",
+      icon: "002",
+      handler: function() {
+        renderSettingPage("push");
+      }
+    }
+  ]
+};
 
 /**
  * 主页
@@ -167,22 +251,13 @@ function render(request, indexDataList) {
   let flowDataLoading = false;
   let callChargeData = null;
   let callChargeDataLoading = false;
-
+  // renderSettingPage();
+  // return;
   // 数据异常时显示网络异常提示和修复方法
-  if(!indexDataList) {
+  if (!indexDataList) {
     $ui.render({
-      props: {
-        navButtons: [
-          {
-            title: "设置",
-            icon: "002",
-            handler: function() {
-              renderSettingPage('push')
-            }
-          }
-        ]
-      },
-      views:[
+      props: viewPropsData,
+      views: [
         {
           type: "label",
           props: {
@@ -198,7 +273,7 @@ function render(request, indexDataList) {
         {
           type: "label",
           props: {
-            text: `1. 设置正确的手机号码，当前的手机号码： ${USER_ID || '--'}`,
+            text: `1. 设置正确的手机号码，当前的手机号码： ${USER_ID || "--"}`,
             align: $align.center,
             font: $font(14),
             id: "error-label2"
@@ -235,7 +310,7 @@ function render(request, indexDataList) {
           },
           events: {
             tapped: function(sender) {
-              renderSettingPage('push')
+              renderSettingPage("push");
             }
           }
         }
@@ -246,17 +321,7 @@ function render(request, indexDataList) {
 
   // 渲染查询面板
   $ui.render({
-    props: {
-      navButtons: [
-        {
-          title: "设置",
-          icon: "002",
-          handler: function() {
-            renderSettingPage('push')
-          }
-        }
-      ]
-    },
+    props: viewPropsData,
     views: [
       {
         type: "tab",
@@ -297,7 +362,9 @@ function render(request, indexDataList) {
                       separatorHidden: true,
                       rowHeight: 30,
                       data: sortFlowData.map((item, index) => {
-                        const percent = +item.xUsedValue / (+item.xUsedValue + +item.totalResourceVal);
+                        const percent =
+                          +item.xUsedValue /
+                          (+item.xUsedValue + +item.totalResourceVal);
                         return {
                           rows: [
                             {
@@ -316,7 +383,7 @@ function render(request, indexDataList) {
                               type: "progress",
                               props: {
                                 trackColor: $color("#f5f5f5"),
-                                value: percent !== percent? 0 : percent
+                                value: percent !== percent ? 0 : percent
                               },
                               layout: function(make, view) {
                                 make.centerY.equalTo(view.super);
@@ -329,8 +396,7 @@ function render(request, indexDataList) {
                               props: {
                                 text: `${item.xUsedValue}${
                                   item.usedUnitVal
-                                }/${+item.xUsedValue +
-                                  +item.totalResourceVal}${
+                                }/${+item.xUsedValue + +item.totalResourceVal}${
                                   item.canUseUnitVal
                                 }`,
                                 textColor: $color("#000"),
@@ -533,8 +599,9 @@ function handleFlowData(flowData) {
   const restPerArr = [];
   const nullPerArr = [];
   flowData.woFeePolicy.map(function(item) {
-    const percent = +item.xUsedValue / (+item.xUsedValue + +item.totalResourceVal)
-    if(percent === 0) {
+    const percent =
+      +item.xUsedValue / (+item.xUsedValue + +item.totalResourceVal);
+    if (percent === 0) {
       zeroPerArr.push(item);
     } else if (percent === 1) {
       fullPerArr.push(item);
@@ -545,13 +612,15 @@ function handleFlowData(flowData) {
     } else {
       restPerArr.push(item);
     }
-  })
+  });
 
   restPerArr.sort(function(pre, current) {
-    const prePercent = +pre.xUsedValue / (+pre.xUsedValue + +pre.totalResourceVal)
-    const currentPercent = +current.xUsedValue / (+current.xUsedValue + +current.totalResourceVal)
+    const prePercent =
+      +pre.xUsedValue / (+pre.xUsedValue + +pre.totalResourceVal);
+    const currentPercent =
+      +current.xUsedValue / (+current.xUsedValue + +current.totalResourceVal);
     return currentPercent - prePercent;
-  })
+  });
   return [...fullPerArr, ...restPerArr, ...zeroPerArr, ...nullPerArr];
 }
 
