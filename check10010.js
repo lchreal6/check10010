@@ -369,9 +369,19 @@ function render(request, indexDataList) {
                       separatorHidden: true,
                       rowHeight: 30,
                       data: sortFlowData.map((item, index) => {
-                        const percent =
-                          +item.xUsedValue /
-                          (+item.xUsedValue + +item.totalResourceVal);
+                        const percent =  (100 - item.usedPercentVal) / 100;
+                        let itemText = '';
+
+                        // 流量
+                        if(item.resourceType === '01') {
+                          itemText = `${parseInt(item.addUpUpper * percent)}MB/${parseInt(item.addUpUpper)}MB`
+                        } else {
+                          itemText = `${item.xUsedValue}${
+                            item.usedUnitVal
+                          }/${+item.xUsedValue + +item.totalResourceVal}${
+                            item.canUseUnitVal
+                          }`
+                        }
                         return {
                           rows: [
                             {
@@ -390,7 +400,7 @@ function render(request, indexDataList) {
                               type: "progress",
                               props: {
                                 trackColor: $color("#f5f5f5"),
-                                value: percent !== percent ? 0 : percent
+                                value: percent
                               },
                               layout: function(make, view) {
                                 make.centerY.equalTo(view.super);
@@ -401,11 +411,7 @@ function render(request, indexDataList) {
                             {
                               type: "label",
                               props: {
-                                text: `${item.xUsedValue}${
-                                  item.usedUnitVal
-                                }/${+item.xUsedValue + +item.totalResourceVal}${
-                                  item.canUseUnitVal
-                                }`,
+                                text: itemText,
                                 textColor: THEME_TEXT_COLOR,
                                 align: $align.center
                               },
